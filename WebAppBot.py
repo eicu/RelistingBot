@@ -24,10 +24,10 @@ class WebAppBot:
         self.pw = pw
         self.options = webdriver.ChromeOptions()
         self.driver = None
-        
+
         self.set_options()
         self.open_chrome()
-        
+
 
     def quit(self):
         input('Press Enter to exit')
@@ -44,7 +44,7 @@ class WebAppBot:
         #self.options.add_argument('--headless')
         #self.options.add_argument('--remote-debugging-port=45600')
 
-    
+
     def open_chrome(self):
         try:
             print('[LOG] Opening Chrome...')
@@ -53,8 +53,8 @@ class WebAppBot:
         except Exception as e:
             print('[FAIL]', e)
             exit()
-            
-            
+
+
     def open_webapp(self):
         print('[LOG] Opening WebApp...')
         self.driver.get(WEBAPP_URL)
@@ -69,47 +69,52 @@ class WebAppBot:
     def login(self):
         print('[LOG] Logging in...')
         sleep(1)
-        
+
         try:
             WebDriverWait(self.driver, 5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button.btn-standard.call-to-action')))
             self.driver.find_element_by_css_selector('button.btn-standard.call-to-action').click()
-            
+
             print('[LOG] Trying to log in...')
             try:
                 WebDriverWait(self.driver, 5).until(EC.visibility_of_element_located((By.XPATH, '//*[@id="email"]')))
                 self.driver.find_element_by_xpath('//*[@id="email"]').clear()
                 self.driver.find_element_by_xpath('//*[@id="email"]').send_keys(self.username)
                 self.driver.find_element_by_xpath('//*[@id="password"]').send_keys(self.pw)
-                self.driver.find_element_by_xpath('//*[@id="btnLogin"]').click()
+                self.driver.find_element_by_xpath('//*[@id="logInBtn"]').click()
 
                 print('[LOG] Is there an error ?')
                 try:
+                    self.login_verification()
+
                     self.driver.find_element_by_xpath('//*[@class="general-error"]')
                     print("[FAIL] Login failed ! Wrong email or password")
                     self.quit()
                 except EX.NoSuchElementException:
                     print("[SUCCESS] Logged in!")
                     WebDriverWait(self.driver, 15).until(EC.visibility_of_element_located((By.CLASS_NAME, 'ut-click-shield')))
-                self.login_verification()
             except EX.TimeoutException:
                 print('[FAIL] Timeout: probably already logged in')
-                
+
         except EX.TimeoutException:
             print('[SUCCESS] Already logged in')
-        
+
         self.wait_webapp_loaded()
-            
-            
+
+
     def login_verification(self):
+
+        print('login_verification');
+
         try:
-            WebDriverWait(self.driver, 1).until(EC.visibility_of_element_located((By.XPATH, '//*[@id="panel-tfa"]/div/div/div/h1')))
+            WebDriverWait(self.driver, 1).until(EC.visibility_of_element_located((By.XPATH, '//*[@id="btnSendCode"]')))
         except EX.TimeoutException:
+            print('no verif');
             return 'no verif'
-        
+
         try:
             print('[VERIFICATION] Looks like it is the first time you are using this.')
             print('[VERIFICATION] EA need to verify your identity')
-            print('[VERIFICATION] You will receive a code:', self.driver.find_element_by_xpath('//*[@id="panel-tfa"]/div/div/div/div[2]/p/strong').text)
+            print('[VERIFICATION] You will receive a code:')
             self.driver.find_element_by_xpath('//*[@id="btnSendCode"]').click()
         except Exception:
             print('[FAIL]', e)
@@ -119,7 +124,7 @@ class WebAppBot:
         repeat = True
         while repeat:
             code = input('[VERIFICATION] Please type in the code you received: ')
-            self.driver.find_element_by_xpath('//*[@id="oneTimeCode"]').send_keys(code)
+            self.driver.find_element_by_xpath('//*[@id="twoFactorCode"]').send_keys(code)
             self.driver.find_element_by_xpath('//*[@id="btnSubmit"]').click()
             sleep(1)
             try:
@@ -144,7 +149,7 @@ class WebAppBot:
         except Exception as e:
             print('[FAIL]', e)
             self.quit()
-            
+
 
     def click_transfers(self):
         print('[LOG] Clicking on Transfers')
@@ -168,10 +173,10 @@ class WebAppBot:
 
     def relist_all(self):
         print('[LOG] Looking for players to relist...')
-        
+
         self.click_transfers()
         self.click_transfer_list()
-        
+
         try:
             self.driver.find_element_by_xpath("//*[contains(text(), 'Re-list All')]").click()
             self.wait_webapp_loaded()
