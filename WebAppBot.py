@@ -24,6 +24,7 @@ class WebAppBot:
         self.pw = pw
         self.options = webdriver.ChromeOptions()
         self.driver = None
+        self.retries = 10
 
         self.set_options()
         self.open_chrome()
@@ -63,7 +64,7 @@ class WebAppBot:
             print('[SUCCESS] WebApp opened')
         except EX.TimeoutException:
             print('[FAIL] Timeout')
-            self.quit()
+            raise
 
 
     def login(self):
@@ -119,7 +120,7 @@ class WebAppBot:
         except Exception:
             print('[FAIL]', e)
             print('[FAIL] Try to manually enter the code, then restart the program')
-            self.quit()
+            raise
 
         repeat = True
         while repeat:
@@ -145,10 +146,10 @@ class WebAppBot:
             print('[SUCCESS] WebApp loaded')
         except EX.TimeoutException:
             print('[FAIL] Timeout')
-            self.quit()
+            raise
         except Exception as e:
             print('[FAIL]', e)
-            self.quit()
+            raise
 
 
     def click_transfers(self):
@@ -158,7 +159,7 @@ class WebAppBot:
             self.wait_webapp_loaded()
         except Exception as e:
             print('[FAIL]', e)
-            self.quit()
+            raise
 
 
     def click_transfer_list(self):
@@ -168,7 +169,7 @@ class WebAppBot:
             self.wait_webapp_loaded()
         except EX.TimeoutException:
             print('[FAIL] Timeout')
-            self.quit()
+            raise
 
 
     def relist_all(self):
@@ -184,21 +185,32 @@ class WebAppBot:
                 self.driver.find_element_by_xpath("//*[contains(text(), 'Yes')]").click()
                 print('[SUCCESS] Players relisted')
                 self.wait_webapp_loaded()
-            except EX.TimeoutException:
-                print('[FAIL] Timeout')
+            except EX.TimeoutException as e:
+                print('[FAIL] Timeout', e)
+                raise
         except EX.ElementNotInteractableException:
             print('[SUCCESS] No players to relist')
+            raise
 
 
     def auto_relist(self): # main loop
         try:
             while True:
-                self.open_webapp()
-                self.login()
-                self.relist_all()
+                try:
+                    self.open_webapp()
+                    self.login()
+                    self.relist_all()
 
-                print('[WAIT] Do not close the window! You can minimize it')
-                print('[WAIT] Press Ctrl+C to close the program')
-                countdown(3630)
+                    print('[WAIT] Do not close the window! You can minimize it')
+                    print('[WAIT] Press Ctrl+C to close the program')
+                    countdown(3630)
+                except Exception as e:
+                    if (self.retries < 0):
+                        self.quit()
+
+                    self.retries -= 1
+                    print('[ERROR] An Error occured, try again n 10 Minutes')
+                    countdown(600)
+
         except KeyboardInterrupt:
             self.quit()
